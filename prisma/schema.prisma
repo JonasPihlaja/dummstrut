@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Bet {
+  id          Int         @id @default(autoincrement())
+  bet         String
+  description String?
+  owners      Bet_Owner[]
+  agents      Bet_Agent[]
+  results     Result[]
+  answers     Answer[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Agent {
+  id           Int          @id @default(autoincrement())
+  user         Int
+  user_relation User        @relation(fields: [user], references: [id])
+  bets_owned   Bet_Owner[]
+  bets         Bet_Agent[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Bet_Owner {
+  id       Int    @id @default(autoincrement())
+  bet      Int
+  agent    Int
+  bet_rel  Bet    @relation(fields: [bet], references: [id])
+  agent_rel Agent @relation(fields: [agent], references: [id])
+}
+
+model Bet_Agent {
+  id            Int       @id @default(autoincrement())
+  agent         Int?
+  agent_relation Agent?   @relation(fields: [agent], references: [id])
+  bet           Int?
+  bet_relation  Bet?      @relation(fields: [bet], references: [id])
+}
+
+model Result {
+  id           Int       @id @default(autoincrement())
+  success      Boolean?
+  description  String?
+  bet          Int
+  bet_relation Bet       @relation(fields: [bet], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  username  String    @unique
+  password  String
+  admin     Boolean   @default(false)
+  agents    Agent[]
+  answers   Answer[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Answer {
+  id             Int       @id @default(autoincrement())
+  success        Boolean
+  comment        String?
+  user           Int?
+  user_relation  User?     @relation(fields: [user], references: [id])
+  bet            Int
+  bet_relation   Bet       @relation(fields: [bet], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+
