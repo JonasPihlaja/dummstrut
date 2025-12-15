@@ -5,6 +5,11 @@ import { revalidatePath } from "next/cache";
 
 export default async function Home() {
   const agents = await prisma.agent.findMany({
+    where: {
+      user_relation: {
+        admin: false
+      }
+    },
     include: {
       user_relation: {
         select: {
@@ -25,7 +30,8 @@ export default async function Home() {
     <div className="w-full flex items-center justify-center p-4">
       <div
         className="
-          w-[60%]
+          max-w-[50%]
+          w-3xl
           border border-gray-200 
           rounded-2xl 
           shadow-xl

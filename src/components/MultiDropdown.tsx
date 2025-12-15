@@ -1,26 +1,26 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 
-export interface SingleSelectOption<T extends string | number = string | number> {
+export interface MultiSelectOption<T extends string | number = string | number> {
   value: T;
   label: string;
 }
 
-export interface SingleSelectDropdownProps<T extends string | number = string | number> {
-  options: SingleSelectOption<T>[];
-  value?: T;
-  onChange: (value: T) => void;
+export interface MultiSelectDropdownProps<T extends string | number = string | number> {
+  options: MultiSelectOption<T>[];
+  value: T[];
+  onChange: (value: T[]) => void;
   placeholder?: string;
   className?: string;
 }
 
-export default function SingleSelectDropdown<T extends string | number = string | number>({
+export default function MultiSelectDropdown<T extends string | number = string | number>({
   options,
   value,
   onChange,
   placeholder = "Select...",
   className = "",
-}: SingleSelectDropdownProps<T>) {
+}: MultiSelectDropdownProps<T>) {
   const [open, setOpen] = useState<boolean>(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -41,16 +41,27 @@ export default function SingleSelectDropdown<T extends string | number = string 
     };
   }, []);
 
-  const handleSelect = (val: T): void => {
-    onChange(val);
-    setOpen(false);
+  const isSelected = (val: T): boolean => {
+    return value.includes(val);
+  };
+
+  const toggleValue = (val: T): void => {
+    if (value.includes(val)) {
+      onChange(value.filter((v) => v !== val));
+    } else {
+      onChange([...value, val]);
+    }
   };
 
   const displayValue = (): string => {
-    return options.find((o) => o.value === value)?.label ?? placeholder;
+    if (value.length === 0) return placeholder;
+    return options
+      .filter((o) => value.includes(o.value))
+      .map((o) => o.label)
+      .join(", ");
   };
 
-  const hasValue = value !== undefined && value !== null && value !== "";
+  const hasValue = value.length > 0;
 
   return (
     <div ref={ref} className={`relative ${className}`}>
@@ -72,11 +83,15 @@ export default function SingleSelectDropdown<T extends string | number = string 
             {options.map((opt) => (
               <li
                 key={opt.value}
-                onClick={() => handleSelect(opt.value)}
-                className={`cursor-pointer px-3 py-2 hover:bg-gray-100 ${
-                  value === opt.value ? "bg-indigo-50 font-medium" : ""
-                }`}
+                onClick={() => toggleValue(opt.value)}
+                className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-gray-100"
               >
+                <input
+                  type="checkbox"
+                  checked={isSelected(opt.value)}
+                  readOnly
+                  className="cursor-pointer"
+                />
                 <span>{opt.label}</span>
               </li>
             ))}

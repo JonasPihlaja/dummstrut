@@ -1,38 +1,48 @@
 "use client";
-
 import React from "react";
 import ValueInput from "@/components/ValueInput";
-import Dropdown from "./Dropdown";
+import {
+  BetCreatorProps,
+  MessageState,
+  Agent,
+  SubmitResult,
+} from "@/types/bet";
+import MultiSelectDropdown, { MultiSelectOption } from "./MultiDropdown";
+export default function BetCreator({
+  agentVals,
+  onSubmitBet,
+  userAgentId,
+}: BetCreatorProps) {
 
-export default function BetCreator({ agentVals, onSubmitBet, userAgentId }) {
-  const [agents, setAgents] = React.useState([]);
-  const [title, setTitle] = React.useState("");
-  const [description, setDescription] = React.useState("");
-  const [message, setMessage] = React.useState(null);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [agents, setAgents] = React.useState<number[]>([]);
+  const [title, setTitle] = React.useState<string>("");
+  const [description, setDescription] = React.useState<string>("");
+  const [message, setMessage] = React.useState<MessageState>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
 
-  const dropdownAgents = agentVals.map((agent) => {
-    return {
+  const dropdownAgents: MultiSelectOption<number>[] = agentVals.map(
+    (agent) => ({
       label: agent.user_relation.username,
       value: agent.id,
-    };
-  });
+    })
+  );
 
   React.useEffect(() => {
     if (userAgentId) {
       const matchingAgent = agentVals.find((agent) => agent.id === userAgentId);
-
       if (matchingAgent) {
         setAgents([matchingAgent.id]);
       }
     }
   }, [userAgentId, agentVals]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (
+    e: React.FormEvent<HTMLFormElement>
+  ): Promise<void> => {
     e.preventDefault();
     setIsSubmitting(true);
     setMessage(null);
-
+    
     const result = await onSubmitBet({
       title,
       description,
@@ -40,10 +50,8 @@ export default function BetCreator({ agentVals, onSubmitBet, userAgentId }) {
     });
 
     setIsSubmitting(false);
-
     if (result.success) {
       setMessage({ type: "success", text: result.message });
-      // Reset form
       setTitle("");
       setDescription("");
       setAgents(userAgentId ? [userAgentId] : []);
@@ -55,7 +63,6 @@ export default function BetCreator({ agentVals, onSubmitBet, userAgentId }) {
   return (
     <form className="shrink-0" onSubmit={handleSubmit}>
       <div className="p-6 space-y-6">
-        {/* Success/Error Message */}
         {message && (
           <div
             className={`p-4 rounded-lg ${
@@ -78,7 +85,6 @@ export default function BetCreator({ agentVals, onSubmitBet, userAgentId }) {
             placeholder="Enter a short bet title..."
           />
         </div>
-
         <div className="space-y-2">
           <label className="block text-xl font-medium text-gray-700">
             Description
@@ -88,20 +94,17 @@ export default function BetCreator({ agentVals, onSubmitBet, userAgentId }) {
             value={description}
             onChange={setDescription}
             placeholder="Describe what the bet is about..."
-            textarea={true}
+            textarea
           />
         </div>
-
-        <div className="space-y-2 space-y-4">
-          <Dropdown
+        <div className="space-y-4">
+          <MultiSelectDropdown
             options={dropdownAgents}
             value={agents}
             onChange={setAgents}
-            multiple={true}
             placeholder="Choose an agent..."
           />
         </div>
-
         <button
           type="submit"
           disabled={isSubmitting}

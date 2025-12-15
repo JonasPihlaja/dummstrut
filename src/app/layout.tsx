@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen">
         <LoginModalProvider>
         <Navbar />     {/* ← This appears on every page */}
-        <main className="max-w-7xl mx-auto">
+        <main className="mx-auto">
           {children}
         </main>
         </LoginModalProvider>

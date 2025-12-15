@@ -1,12 +1,14 @@
 "use client";
 
+import { Answer } from "@prisma/client";
+import { BetCardProps } from "@/types/bet";
 import { useState } from "react";
 
 function betCountRatio(answers = []) {
   let successCount = 0;
   let failCount = 0;
 
-  answers.forEach((ans) => (ans.success ? successCount++ : failCount++));
+  answers.forEach((ans: Answer) => (ans.success ? successCount++ : failCount++));
 
   return { successCount, failCount };
 }
@@ -21,7 +23,7 @@ export function BetCard({
   userId,
   userAnswer,
   userComment,
-}) {
+}: BetCardProps) {
   const { successCount, failCount } = betCountRatio(bet.answers);
   const total = successCount + failCount;
 
@@ -77,7 +79,9 @@ export function BetCard({
           <span className="text-xs text-gray-700 px-2 py-1 rounded-full">
             By:
           </span>
-          {bet.owners.map((owner) => (
+          
+          { 
+            bet.owners.map((owner: any) => (
             <span
               key={owner.id}
               className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full"

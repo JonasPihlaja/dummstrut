@@ -1,6 +1,5 @@
 "use client";
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, ChangeEvent } from "react";
 
 /**
  * SimpleValueInput
@@ -16,7 +15,18 @@ import React, { useState, useEffect } from "react";
  *   - rows (number) optional — textarea height
  *   - placeholder (string) optional
  *   - className (string) optional
+ *   - name (string) optional
  */
+
+interface SimpleValueInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  name?: string;
+  textarea?: boolean;
+  rows?: number;
+  placeholder?: string;
+  className?: string;
+}
 
 export default function SimpleValueInput({
   value,
@@ -26,14 +36,14 @@ export default function SimpleValueInput({
   rows = 4,
   placeholder = "Enter value...",
   className = "",
-}) {
-  const [v, setV] = useState(value);
+}: SimpleValueInputProps) {
+  const [v, setV] = useState<string>(value);
 
   useEffect(() => {
     setV(value);
   }, [value]);
 
-  function handleChange(e) {
+  function handleChange(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const next = e.target.value;
     setV(next);
     onChange(next);

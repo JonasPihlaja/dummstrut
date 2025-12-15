@@ -3,7 +3,7 @@
 import { useState } from "react";
 import LoginModal from "./LoginModal";
 
-export function LoginModalProvider({ children }) {
+export function LoginModalProvider({ children }: any) {
   const [open, setOpen] = useState(false);
 
   return (
