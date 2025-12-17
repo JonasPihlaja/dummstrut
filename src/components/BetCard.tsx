@@ -57,6 +57,7 @@ export function BetCard({
         transition-all duration-400 ease-out 
         transform hover:-translate-y-1
         flex flex-col
+        min-h-[200px]
       "
     >
       <div className="flex justify-between">

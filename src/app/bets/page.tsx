@@ -204,10 +204,11 @@ export default async function BetsPage() {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full px-6">
       <h1 className="text-2xl font-bold text-gray-800">
         Potentiella mottagare av en dummstrut
       </h1>
+      <div className="">
       <BetGrid
         admin={admin}
         bets={bets}
@@ -219,6 +220,7 @@ export default async function BetsPage() {
         userAnswers={userAnswers}
         userComments={userComments}
       />
+      </div>
     </div>
   );
 }

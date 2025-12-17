@@ -7,8 +7,8 @@ export default async function Home() {
   const agents = await prisma.agent.findMany({
     where: {
       user_relation: {
-        admin: false
-      }
+        admin: false,
+      },
     },
     include: {
       user_relation: {
@@ -69,30 +69,33 @@ interface ActionResult {
 
 async function onSubmitBet(data: payload): Promise<ActionResult> {
   "use server";
-  
+
   try {
     const session = await getSession();
     if (!session) {
-      return { success: false, message: "You must be logged in to submit a bet" };
+      return {
+        success: false,
+        message: "You must be logged in to submit a bet",
+      };
     }
-    
+
     const userId =
       typeof session.userId === "string"
         ? parseInt(session.userId)
         : session.userId;
-        
+
     if (!userId) {
       return { success: false, message: "Invalid user ID" };
     }
-    
+
     const userAgent = await prisma.agent.findFirstOrThrow({
       where: {
         user: userId,
       },
     });
-    
+
     const { title, description, agentIds } = data;
-    
+
     await prisma.bet.create({
       data: {
         bet: title,
@@ -111,16 +114,16 @@ async function onSubmitBet(data: payload): Promise<ActionResult> {
         },
       },
     });
-    
+
     revalidatePath("/bets");
-    
+
     return { success: true, message: "Bet created successfully!" };
   } catch (error) {
     console.error("Error creating bet:", error);
-    return { 
-      success: false, 
+    return {
+      success: false,
       message: "Failed to create bet",
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }

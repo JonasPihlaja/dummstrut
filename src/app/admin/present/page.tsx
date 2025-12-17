@@ -36,6 +36,7 @@ interface Bet {
   id: number;
   bet: string;
   description: string | null;
+  videoUrl: string | null;
   answers: Answer[];
   results: Result[];
   agents: Agent[];
@@ -60,7 +61,7 @@ interface BetWithAgent {
 export default function AdminPresentPage() {
   const [bets, setBets] = useState<Bet[]>([]);
   const [currentBetIndex, setCurrentBetIndex] = useState(0);
-  const [revealStage, setRevealStage] = useState<'bet' | 'answers' | 'result' | 'complete'>('bet');
+  const [revealStage, setRevealStage] = useState<'bet' | 'video' | 'answers' | 'result' | 'complete'>('bet');
   const [revealedAnswerCount, setRevealedAnswerCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -161,6 +162,7 @@ export default function AdminPresentPage() {
 
   const hasResult = currentBet?.results && currentBet.results.length > 0;
   const result = hasResult ? currentBet.results[0] : null;
+  const hasVideo = currentBet?.videoUrl && currentBet.videoUrl.trim() !== '';
 
   function calculateUserScores(): UserScore[] {
     const userMap = new Map<number, UserScore>();
@@ -241,6 +243,14 @@ export default function AdminPresentPage() {
 
   function nextStage() {
     if (revealStage === 'bet') {
+      // If video exists, show video next, otherwise go to answers
+      if (hasVideo) {
+        setRevealStage('video');
+      } else {
+        setRevealStage('answers');
+        setRevealedAnswerCount(0);
+      }
+    } else if (revealStage === 'video') {
       setRevealStage('answers');
       setRevealedAnswerCount(0);
     } else if (revealStage === 'answers') {
@@ -679,7 +689,8 @@ export default function AdminPresentPage() {
           }}
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg"
         >
-          {revealStage === 'bet' ? 'Show Answers' : 
+          {revealStage === 'bet' ? (hasVideo ? 'Show Video' : 'Show Answers') : 
+           revealStage === 'video' ? 'Show Answers' :
            revealStage === 'answers' ? (hasResult ? 'Show Result' : 'Complete') :
            revealStage === 'result' ? 'Complete' : 'Next Bet'}
         </button>
@@ -712,8 +723,23 @@ export default function AdminPresentPage() {
           )}
         </div>
 
+        {/* Video Stage - Show video if available */}
+        {revealStage === 'video' && hasVideo && (
+          <div className="w-full max-w-3xl animate-in fade-in zoom-in duration-1000">
+            <div className="bg-black/50 backdrop-blur-sm rounded-2xl p-8 border-2 border-purple-500/50 shadow-2xl shadow-purple-500/20">
+              <video 
+                className="w-full h-[700px] rounded-lg shadow-2xl"
+                controls
+                src={currentBet.videoUrl!}
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          </div>
+        )}
+
         {/* Answers - Revealed one by one on click */}
-        {revealStage !== 'bet' && (
+        {revealStage === 'answers' && (
           <div className="w-full space-y-4">
             <h2 className={`text-4xl font-bold text-center mb-8 text-yellow-400 transition-all duration-1000 ${
               revealStage === 'answers' ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
