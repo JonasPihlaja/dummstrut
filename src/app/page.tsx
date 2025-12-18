@@ -20,6 +20,12 @@ export default async function Home() {
     },
   });
 
+  const seasons = await prisma.season.findMany({
+    where: {
+      locked: false
+    }
+  });
+
   let loggedInAgent;
   const session = await getSession();
   if (session?.userId) {
@@ -46,6 +52,7 @@ export default async function Home() {
         </h1>
 
         <BetCreator
+          seasonVals={seasons}
           agentVals={agents}
           onSubmitBet={onSubmitBet}
           userAgentId={loggedInAgent}
@@ -59,6 +66,7 @@ interface payload {
   title: string;
   description: string;
   agentIds: number[];
+  season: number;
 }
 
 interface ActionResult {
@@ -94,10 +102,15 @@ async function onSubmitBet(data: payload): Promise<ActionResult> {
       },
     });
 
-    const { title, description, agentIds } = data;
+    const { title, description, agentIds, season } = data;
 
     await prisma.bet.create({
       data: {
+        season: {
+          connect: {
+            id: season
+          },
+        },
         bet: title,
         description,
         owners: {
