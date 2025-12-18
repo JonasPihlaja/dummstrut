@@ -7,6 +7,7 @@ import { isAdmin } from "@/lib/auth";
 export default async function BetsPage() {
   const session = await getSession();
   const admin = await isAdmin();
+  let isAllowedToVote = false;
   const userId = session
     ? typeof session.userId === "string"
       ? parseInt(session.userId)
@@ -136,10 +137,14 @@ export default async function BetsPage() {
   const userAnswers = new Map<number, boolean | null>();
   const userComments = new Map<number, string | null>();
   if (userId) {
+    // Also check if the logged in user is allowed to vote, meaning if he has made a bet
     bets.forEach((bet) => {
       const userAnswer = bet.answers.find((answer) => answer.user === userId);
       userAnswers.set(bet.id, userAnswer ? userAnswer.success : null);
       userComments.set(bet.id, userAnswer?.comment || null);
+      if(isAllowedToVote === false) {
+        isAllowedToVote = bet.owners.some(owner => owner.id === userId);
+      }
     });
   }
 
@@ -208,6 +213,7 @@ export default async function BetsPage() {
       <h1 className="text-2xl font-bold text-gray-800">
         Potentiella mottagare av en dummstrut
       </h1>
+      <h4 className="text-lg font-medium text-gray-500">Man kan endast rösta på bets om man har ett eget dummstruts bet och är inloggad</h4>
       <div className="">
       <BetGrid
         admin={admin}
@@ -216,7 +222,7 @@ export default async function BetsPage() {
         onNoAnswer={onNoAnswer}
         onUpdateComment={onUpdateComment}
         onDeleteBet={onDeleteBet}
-        userId={userId}
+        isAllowedToVote={isAllowedToVote}
         userAnswers={userAnswers}
         userComments={userComments}
       />

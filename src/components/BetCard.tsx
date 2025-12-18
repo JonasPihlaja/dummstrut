@@ -20,7 +20,7 @@ export function BetCard({
   onNoAnswer,
   onUpdateComment,
   onDeleteBet,
-  userId,
+  isAllowedToVote,
   userAnswer,
   userComment,
 }: BetCardProps) {
@@ -30,7 +30,7 @@ export function BetCard({
   const yesPercent = total > 0 ? (successCount / total) * 100 : 0;
   const noPercent = total > 0 ? (failCount / total) * 100 : 0;
 
-  const isLoggedIn = userId !== null;
+  const allowedToVote = isAllowedToVote;
   const answeredYes = userAnswer === true;
   const answeredNo = userAnswer === false;
   const hasAnswered = userAnswer !== null;
@@ -122,12 +122,12 @@ export function BetCard({
           <input type="hidden" name="betId" value={bet.id} />
           <button
             type="submit"
-            disabled={!isLoggedIn}
+            disabled={!allowedToVote}
             className={`
               font-semibold text-white py-2.5 px-3 sm:py-2 sm:px-4 rounded-lg transition-all duration-200
               touch-manipulation min-w-[60px] sm:min-w-0
               ${
-                !isLoggedIn
+                !allowedToVote
                   ? "bg-gray-400 cursor-not-allowed opacity-60"
                   : answeredYes
                   ? "bg-green-600 active:bg-green-700 sm:hover:bg-green-700 shadow-lg shadow-green-500/50 border-2 border-green-400 scale-105"
@@ -169,12 +169,12 @@ export function BetCard({
           <input type="hidden" name="betId" value={bet.id} />
           <button
             type="submit"
-            disabled={!isLoggedIn}
+            disabled={!allowedToVote}
             className={`
               font-semibold text-white py-2.5 px-3 sm:py-2 sm:px-4 rounded-lg transition-all duration-200
               touch-manipulation min-w-[60px] sm:min-w-0
               ${
-                !isLoggedIn
+                !allowedToVote
                   ? "bg-gray-400 cursor-not-allowed opacity-60"
                   : answeredNo
                   ? "bg-red-600 active:bg-red-700 sm:hover:bg-red-700 shadow-lg shadow-red-500/50 border-2 border-red-400 scale-105"

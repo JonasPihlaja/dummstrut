@@ -3,7 +3,7 @@ import { Season } from "@prisma/client";
 export interface BetGridProps {
   admin: boolean;
   bets: any[];
-  userId: number | null;
+  isAllowedToVote: boolean;
   userAnswers: Map<number, boolean | null>;
   userComments: Map<number, string | null>;
   onYesAnswer: (formData: FormData) => Promise<void>;
@@ -16,7 +16,7 @@ export interface BetCardProps {
   admin: boolean;
   bet: any;
   key: number;
-  userId: number | null;
+  isAllowedToVote: boolean;
   userAnswer: boolean | null;
   userComment: string | null;
   onYesAnswer: (formData: FormData) => Promise<void>;
