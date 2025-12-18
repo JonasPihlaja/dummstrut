@@ -8,13 +8,16 @@ import {
   SubmitResult,
 } from "@/types/bet";
 import MultiSelectDropdown, { MultiSelectOption } from "./MultiDropdown";
+import SingleSelectDropdown, { SingleSelectOption } from "./Dropdown";
 export default function BetCreator({
+  seasonVals,
   agentVals,
   onSubmitBet,
   userAgentId,
 }: BetCreatorProps) {
 
   const [agents, setAgents] = React.useState<number[]>([]);
+  const [season, setSeason] = React.useState<number>(seasonVals[0]?.id ?? 0);
   const [title, setTitle] = React.useState<string>("");
   const [description, setDescription] = React.useState<string>("");
   const [message, setMessage] = React.useState<MessageState>(null);
@@ -27,7 +30,14 @@ export default function BetCreator({
     })
   );
 
-  React.useEffect(() => {
+  const dropdownSeasons: SingleSelectOption<number>[] = seasonVals.map(
+    (season) => ({
+      label: season.title ? season.title + ' ' + season.year.toString() : "",
+      value: season.id,
+    })
+  );
+
+    React.useEffect(() => {
     if (userAgentId) {
       const matchingAgent = agentVals.find((agent) => agent.id === userAgentId);
       if (matchingAgent) {
@@ -47,6 +57,7 @@ export default function BetCreator({
       title,
       description,
       agentIds: agents,
+      season
     });
 
     setIsSubmitting(false);
@@ -103,6 +114,14 @@ export default function BetCreator({
             value={agents}
             onChange={setAgents}
             placeholder="Choose an agent..."
+          />
+        </div>
+        <div className="space-y-4">
+          <SingleSelectDropdown
+            options={dropdownSeasons}
+            value={season}
+            onChange={setSeason}
+            placeholder="Choose a season..."
           />
         </div>
         <button

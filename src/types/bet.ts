@@ -1,3 +1,5 @@
+import { Season } from "@prisma/client";
+
 export interface BetGridProps {
   admin: boolean;
   bets: any[];
@@ -42,11 +44,13 @@ export type Agent = {
 };
 
 export type BetCreatorProps = {
+  seasonVals: Season[];
   agentVals: Agent[];
   userAgentId?: number;
   onSubmitBet: (data: {
     title: string;
     description: string;
     agentIds: number[];
+    season: number;
   }) => Promise<SubmitResult>;
 };

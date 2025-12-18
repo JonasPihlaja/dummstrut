@@ -69,7 +69,7 @@ export default function MultiSelectDropdown<T extends string | number = string |
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="min-h-10 w-full rounded-md border border-gray-300 bg-white p-2 text-left focus:outline-none focus:ring-2 focus:ring-indigo-300"
+        className="cursor-pointer min-h-10 w-full rounded-md border border-gray-300 bg-white p-2 text-left focus:outline-none focus:ring-2 focus:ring-indigo-300"
       >
         <span className={hasValue ? "" : "text-gray-400"}>
           {displayValue()}
