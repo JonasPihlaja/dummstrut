@@ -21,9 +21,20 @@ export async function Navbar() {
         {loggedIn ? (
           <>
             {session?.admin && (
-              <Link href="/admin/present" className="hover:text-white cursor-pointer">
-                Present
-              </Link>
+              <>
+                <Link
+                  href="/admin/present"
+                  className="hover:text-white cursor-pointer"
+                >
+                  Present
+                </Link>
+                <Link
+                  href="/admin/users"
+                  className="hover:text-white cursor-pointer"
+                >
+                  Users
+                </Link>
+              </>
             )}
             <form action={logoutAction} className="inline">
               <button
