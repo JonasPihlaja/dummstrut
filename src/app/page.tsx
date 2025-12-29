@@ -22,8 +22,8 @@ export default async function Home() {
 
   const seasons = await prisma.season.findMany({
     where: {
-      locked: false
-    }
+      locked: false,
+    },
   });
 
   let loggedInAgent;
@@ -33,21 +33,24 @@ export default async function Home() {
   }
 
   return (
-    <div className="w-full flex items-center justify-center p-4">
+    <div className="min-h-9/12 w-full flex items-start sm:items-center justify-center px-4 py-6 sm:py-10">
       <div
         className="
-          max-w-[50%]
-          w-3xl
-          border border-gray-200 
-          rounded-2xl 
-          shadow-xl
-          hover:shadow-2xl
-          transition-all duration-300 
-          p-6 sm:p-8
-          bg-white
-        "
+        w-full
+        max-w-md
+        sm:max-w-xl
+        lg:max-w-3xl
+        border border-gray-200
+        rounded-2xl
+        shadow-lg
+        transition-shadow duration-300
+        bg-white
+        p-4
+        sm:p-6
+        lg:p-8
+      "
       >
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">
           Skapa dummstruts bet
         </h1>
 
@@ -108,7 +111,7 @@ async function onSubmitBet(data: payload): Promise<ActionResult> {
       data: {
         season: {
           connect: {
-            id: season
+            id: season,
           },
         },
         bet: title,
