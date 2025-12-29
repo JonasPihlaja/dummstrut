@@ -104,6 +104,8 @@ export default async function BetsPage() {
     revalidatePath("/bets");
   }
 
+  const year = new Date().getFullYear();
+
   const bets = await prisma.bet.findMany({
     include: {
       owners: {
@@ -131,6 +133,11 @@ export default async function BetsPage() {
         },
       },
     },
+    where: {
+      season: {
+        year: year
+      },
+    }
   });
 
   // Create a map of betId -> user's answer (true for yes, false for no, null if no answer)
