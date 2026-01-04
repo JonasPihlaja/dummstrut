@@ -51,7 +51,7 @@ export default function FileInput({
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="px-3 py-2 rounded-md border bg-white hover:bg-gray-50 transition"
+        className="px-3 py-2 rounded-md border border-gray-300 bg-white hover:bg-gray-50 transition"
       >
         Choose file
       </button>

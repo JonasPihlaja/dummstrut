@@ -128,7 +128,7 @@ export default function BetCreator({
         </div>
 
         <div className="space-y-4">
-          <FileInput value={video} onChange={setVideo} accept="video/*" />
+          <FileInput value={video} onChange={setVideo} accept="video/*" placeholder="No video selected" />
         </div>
         <button
           type="submit"
