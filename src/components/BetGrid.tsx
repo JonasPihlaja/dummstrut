@@ -1,7 +1,7 @@
 "use client";
-
 import React, { useState } from "react";
 import { CommentModal } from "@/components/CommentModal";
+import { VideoModal } from "@/components/VideoModal";
 import { useRouter } from "next/navigation";
 import { BetGridProps } from "@/types/bet";
 import { BetCard } from "./BetCard";
@@ -21,11 +21,15 @@ export function BetGrid({
   selectedYear,
 }: BetGridProps) {
   const router = useRouter();
-
   const [activeBet, setActiveBet] = useState<{
     id: number;
     comment: string | null;
     locked: boolean;
+  } | null>(null);
+
+  const [activeVideo, setActiveVideo] = useState<{
+    videoUrl: string;
+    betTitle: string;
   } | null>(null);
 
   const dropdownSeasons: SingleSelectOption<number>[] = seasonVals.map(
@@ -50,7 +54,6 @@ export function BetGrid({
         onChange={handleSeasonChange}
         placeholder="Choose a season..."
       />
-
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-6">
         {bets.map((bet) => (
           <BetCard
@@ -70,9 +73,18 @@ export function BetGrid({
                 locked: bet.season.locked,
               })
             }
+            onOpenVideo={() => {
+              if (bet.videoUrl) {
+                setActiveVideo({
+                  videoUrl: bet.videoUrl,
+                  betTitle: bet.bet,
+                });
+              }
+            }}
           />
         ))}
       </div>
+
       {activeBet && (
         <CommentModal
           betId={activeBet.id}
@@ -83,6 +95,14 @@ export function BetGrid({
             await onUpdateComment(formData);
             setActiveBet(null);
           }}
+        />
+      )}
+
+      {activeVideo && (
+        <VideoModal
+          videoUrl={activeVideo.videoUrl}
+          betTitle={activeVideo.betTitle}
+          onClose={() => setActiveVideo(null)}
         />
       )}
     </>

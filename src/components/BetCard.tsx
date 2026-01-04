@@ -24,7 +24,11 @@ export function BetCard({
   userAnswer,
   userComment,
   onOpenComment,
-}: BetCardProps & { onOpenComment: () => void }) {
+  onOpenVideo,
+}: BetCardProps & { 
+  onOpenComment: () => void;
+  onOpenVideo: () => void;
+}) {
   const { successCount, failCount } = betCountRatio(bet.answers);
   const total = successCount + failCount;
 
@@ -36,6 +40,7 @@ export function BetCard({
   const hasAnswered = userAnswer !== null;
 
   const commentLocked = bet.season.locked;
+  const hasVideo = !!bet.videoUrl;
 
   async function handleDelete() {
     if (!confirm("Are you sure you want to delete this bet?")) return;
@@ -69,7 +74,7 @@ export function BetCard({
         {bet.description}
       </p>
 
-      {/* Owners + comment */}
+      {/* Owners + actions */}
       <div className="mt-auto pt-4 flex justify-between items-center gap-2">
         <div className="flex flex-wrap gap-2">
           {bet.owners.map((owner: any) => (
@@ -82,29 +87,43 @@ export function BetCard({
           ))}
         </div>
 
-        {hasAnswered && (
-          <button
-            onClick={onOpenComment}
-            disabled={commentLocked}
-            title={
-              commentLocked
-                ? "Comments are locked for this season"
-                : userComment
-                ? "Edit comment"
-                : "Add comment"
-            }
-            className={`
-              p-2 rounded transition-all duration-200
-              ${
+        <div className="flex gap-2">
+          {/* Video button */}
+          {hasVideo && (
+            <button
+              onClick={onOpenVideo}
+              title="Watch video"
+              className="p-2 rounded transition-all duration-200 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+            >
+              🎥
+            </button>
+          )}
+
+          {/* Comment button */}
+          {hasAnswered && (
+            <button
+              onClick={onOpenComment}
+              disabled={commentLocked}
+              title={
                 commentLocked
-                  ? "text-gray-300 cursor-not-allowed"
-                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                  ? "Comments are locked for this season"
+                  : userComment
+                  ? "Edit comment"
+                  : "Add comment"
               }
-            `}
-          >
-            ✏️
-          </button>
-        )}
+              className={`
+                p-2 rounded transition-all duration-200
+                ${
+                  commentLocked
+                    ? "text-gray-300 cursor-not-allowed"
+                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                }
+              `}
+            >
+              ✏️
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Voting */}

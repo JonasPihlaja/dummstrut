@@ -54,5 +54,6 @@ export type BetCreatorProps = {
     description: string;
     agentIds: number[];
     season: number;
+    video?: File | null | undefined;
   }) => Promise<SubmitResult>;
 };

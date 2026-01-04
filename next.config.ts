@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+    experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb', // Increase to match your MAX_VIDEO_SIZE
+    },
+  },
 };
 
 export default nextConfig;

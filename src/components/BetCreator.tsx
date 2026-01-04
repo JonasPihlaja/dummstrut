@@ -9,16 +9,17 @@ import {
 } from "@/types/bet";
 import MultiSelectDropdown, { MultiSelectOption } from "./MultiDropdown";
 import SingleSelectDropdown, { SingleSelectOption } from "./Dropdown";
+import FileInput from "@/components/FileInput";
 export default function BetCreator({
   seasonVals,
   agentVals,
   onSubmitBet,
   userAgentId,
 }: BetCreatorProps) {
-
   const [agents, setAgents] = React.useState<number[]>([]);
   const [season, setSeason] = React.useState<number>(seasonVals[0]?.id ?? 0);
   const [title, setTitle] = React.useState<string>("");
+  const [video, setVideo] = React.useState<File | null>(null);
   const [description, setDescription] = React.useState<string>("");
   const [message, setMessage] = React.useState<MessageState>(null);
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
@@ -32,12 +33,12 @@ export default function BetCreator({
 
   const dropdownSeasons: SingleSelectOption<number>[] = seasonVals.map(
     (season) => ({
-      label: season.title ? season.title + ' ' + season.year.toString() : "",
+      label: season.title ? season.title + " " + season.year.toString() : "",
       value: season.id,
     })
   );
 
-    React.useEffect(() => {
+  React.useEffect(() => {
     if (userAgentId) {
       const matchingAgent = agentVals.find((agent) => agent.id === userAgentId);
       if (matchingAgent) {
@@ -52,12 +53,13 @@ export default function BetCreator({
     e.preventDefault();
     setIsSubmitting(true);
     setMessage(null);
-    
+
     const result = await onSubmitBet({
       title,
       description,
       agentIds: agents,
-      season
+      season,
+      video,
     });
 
     setIsSubmitting(false);
@@ -123,6 +125,10 @@ export default function BetCreator({
             onChange={setSeason}
             placeholder="Choose a season..."
           />
+        </div>
+
+        <div className="space-y-4">
+          <FileInput value={video} onChange={setVideo} accept="video/*" />
         </div>
         <button
           type="submit"
