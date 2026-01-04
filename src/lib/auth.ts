@@ -22,7 +22,7 @@ export async function getSession() {
     const { payload } = await jwtVerify(token, SECRET_KEY, {
       algorithms: ["HS256"],
     });
-    return payload as { userId: number | string; username: string; admin?: boolean };
+    return payload as { userId: number; username: string; admin?: boolean };
   } catch {
     return null;
   }

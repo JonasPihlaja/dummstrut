@@ -36,6 +36,12 @@ export async function Navbar() {
                 </Link>
               </>
             )}
+            <Link
+              href="/account"
+              className="hover:text-white cursor-pointer"
+            >
+              Account
+            </Link>
             <form action={logoutAction} className="inline">
               <button
                 type="submit"
