@@ -10,6 +10,8 @@ export interface BetGridProps {
   onNoAnswer: (formData: FormData) => Promise<void>;
   onUpdateComment: (formData: FormData) => Promise<void>;
   onDeleteBet: (id: number) => Promise<void>;
+  seasonVals: Season[];
+  selectedYear: number;
 }
 
 export interface BetCardProps {
@@ -21,8 +23,8 @@ export interface BetCardProps {
   userComment: string | null;
   onYesAnswer: (formData: FormData) => Promise<void>;
   onNoAnswer: (formData: FormData) => Promise<void>;
-  onUpdateComment: (formData: FormData) => Promise<void>;
   onDeleteBet: (id: number) => Promise<void>;
+  onOpenComment: () => void;
 }
 
 
