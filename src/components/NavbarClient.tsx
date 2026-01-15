@@ -12,6 +12,11 @@ interface NavbarProps {
 }
 
 export function NavbarClient({ session, logoutAction }: NavbarProps) {
+
+  const preLogoutAction = () => {
+    logoutAction()
+    closeMenu()
+  }
   const [isOpen, setIsOpen] = useState(false);
   const loggedIn = !!session;
 
@@ -23,8 +28,8 @@ export function NavbarClient({ session, logoutAction }: NavbarProps) {
       <div className="flex justify-between items-center">
         {/* Logo */}
         <h1 className="text-xl font-bold">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="hover:text-white cursor-pointer"
             onClick={closeMenu}
           >
@@ -55,10 +60,7 @@ export function NavbarClient({ session, logoutAction }: NavbarProps) {
                   </Link>
                 </>
               )}
-              <Link
-                href="/account"
-                className="hover:text-white cursor-pointer"
-              >
+              <Link href="/account" className="hover:text-white cursor-pointer">
                 Account
               </Link>
               <form action={logoutAction} className="inline">
@@ -115,8 +117,8 @@ export function NavbarClient({ session, logoutAction }: NavbarProps) {
       {isOpen && (
         <div className="md:hidden mt-4 pb-2 border-t border-gray-700 pt-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex flex-col space-y-3 text-gray-300">
-            <Link 
-              href="/bets" 
+            <Link
+              href="/bets"
               className="hover:text-white cursor-pointer py-2 px-2 rounded hover:bg-gray-800 transition-colors"
               onClick={closeMenu}
             >
@@ -149,11 +151,13 @@ export function NavbarClient({ session, logoutAction }: NavbarProps) {
                 >
                   Account
                 </Link>
-                <form action={logoutAction} className="w-full">
+                <form
+                  action={preLogoutAction}
+                  className="w-full"
+                >
                   <button
                     type="submit"
                     className="w-full text-left hover:text-white cursor-pointer bg-transparent border-none py-2 px-2 rounded hover:bg-gray-800 transition-colors"
-                    onClick={closeMenu}
                   >
                     Logout
                   </button>
