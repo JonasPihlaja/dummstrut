@@ -15,9 +15,9 @@ const COOKIE_NAME = "session";
 export async function getSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
-  
+
   if (!token) return null;
-  
+
   try {
     const { payload } = await jwtVerify(token, SECRET_KEY, {
       algorithms: ["HS256"],
@@ -29,9 +29,13 @@ export async function getSession() {
 }
 
 // Set session after login
-async function setSession(userId: number, username: string, admin: boolean = false) {
+async function setSession(
+  userId: number,
+  username: string,
+  admin: boolean = false
+) {
   const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  
+
   const token = await new SignJWT({ userId, username, admin })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -76,7 +80,12 @@ export async function loginAction(formData: FormData) {
   }
 
   const user = await prisma.user.findFirst({
-    where: { username },
+    where: {
+      username: {
+        equals: username,
+        mode: "insensitive",
+      },
+    },
   });
 
   if (!user) {
