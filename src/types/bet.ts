@@ -1,8 +1,21 @@
-import { Season } from "@prisma/client";
+import { Bet, Answer, Season, Bet_Owner, User } from "@prisma/client";
+
+
+export type BetWithRelations = Bet & {
+  season: Pick<Season, "locked">;
+  answers: Answer[];
+  owners: (Bet_Owner & {
+    agent_rel: {
+      user_relation: Pick<User, "id" | "username">;
+    };
+  })[];
+};
+
 
 export interface BetGridProps {
   admin: boolean;
-  bets: any[];
+  bets: BetWithRelations[];
+  userId: number | null;
   isAllowedToVote: boolean;
   userAnswers: Map<number, boolean | null>;
   userComments: Map<number, string | null>;
@@ -10,14 +23,16 @@ export interface BetGridProps {
   onNoAnswer: (formData: FormData) => Promise<void>;
   onUpdateComment: (formData: FormData) => Promise<void>;
   onDeleteBet: (id: number) => Promise<void>;
+  onAppendVideo: (
+    formData: FormData
+  ) => Promise<{ success: boolean; message: string; error?: string } | undefined>;
   seasonVals: Season[];
   selectedYear: number;
 }
 
 export interface BetCardProps {
   admin: boolean;
-  bet: any;
-  key: number;
+  bet: BetWithRelations;
   isAllowedToVote: boolean;
   userAnswer: boolean | null;
   userComment: string | null;
@@ -25,6 +40,8 @@ export interface BetCardProps {
   onNoAnswer: (formData: FormData) => Promise<void>;
   onDeleteBet: (id: number) => Promise<void>;
   onOpenComment: () => void;
+  onOpenVideo: () => void;
+  onRequestAppendVideo?: () => void;
 }
 
 

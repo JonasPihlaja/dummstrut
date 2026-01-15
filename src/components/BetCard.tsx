@@ -7,9 +7,7 @@ function betCountRatio(answers: Answer[] = []) {
   let successCount = 0;
   let failCount = 0;
 
-  answers.forEach((ans) =>
-    ans.success ? successCount++ : failCount++
-  );
+  answers.forEach((ans) => (ans.success ? successCount++ : failCount++));
 
   return { successCount, failCount };
 }
@@ -17,18 +15,16 @@ function betCountRatio(answers: Answer[] = []) {
 export function BetCard({
   admin,
   bet,
-  onYesAnswer,
-  onNoAnswer,
-  onDeleteBet,
   isAllowedToVote,
   userAnswer,
   userComment,
+  onYesAnswer,
+  onNoAnswer,
+  onDeleteBet,
   onOpenComment,
   onOpenVideo,
-}: BetCardProps & { 
-  onOpenComment: () => void;
-  onOpenVideo: () => void;
-}) {
+  onRequestAppendVideo,
+}: BetCardProps & {}) {
   const { successCount, failCount } = betCountRatio(bet.answers);
   const total = successCount + failCount;
 
@@ -39,7 +35,7 @@ export function BetCard({
   const answeredNo = userAnswer === false;
   const hasAnswered = userAnswer !== null;
 
-  const commentLocked = bet.season.locked;
+  const seasonLocked = bet.season.locked;
   const hasVideo = !!bet.videoUrl;
 
   async function handleDelete() {
@@ -98,14 +94,23 @@ export function BetCard({
               🎥
             </button>
           )}
+          {onRequestAppendVideo && !hasVideo && !seasonLocked && (
+            <button
+              onClick={onRequestAppendVideo}
+              title="Add video"
+              className="p-2 rounded transition-all duration-200 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+            >
+              🎥?
+            </button>
+          )}
 
           {/* Comment button */}
           {hasAnswered && (
             <button
               onClick={onOpenComment}
-              disabled={commentLocked}
+              disabled={seasonLocked}
               title={
-                commentLocked
+                seasonLocked
                   ? "Comments are locked for this season"
                   : userComment
                   ? "Edit comment"
@@ -114,7 +119,7 @@ export function BetCard({
               className={`
                 p-2 rounded transition-all duration-200
                 ${
-                  commentLocked
+                  seasonLocked
                     ? "text-gray-300 cursor-not-allowed"
                     : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                 }
@@ -156,11 +161,7 @@ export function BetCard({
             className={`
               absolute left-0 top-0 h-full bg-emerald-500
               transition-all duration-500
-              ${
-                answeredYes
-                  ? "shadow-lg shadow-green-500/40"
-                  : ""
-              }
+              ${answeredYes ? "shadow-lg shadow-green-500/40" : ""}
             `}
             style={{ width: `${yesPercent}%` }}
           />
@@ -168,11 +169,7 @@ export function BetCard({
             className={`
               absolute right-0 top-0 h-full bg-rose-500
               transition-all duration-500
-              ${
-                answeredNo
-                  ? "shadow-lg shadow-red-500/40"
-                  : ""
-              }
+              ${answeredNo ? "shadow-lg shadow-red-500/40" : ""}
             `}
             style={{ width: `${noPercent}%` }}
           />

@@ -2,12 +2,24 @@ import prisma from "@/lib/prisma";
 import { BetGrid } from "@/components/BetGrid";
 import { getSession, isAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { put } from "@vercel/blob";
 
 export default async function BetsPage({
   searchParams,
 }: {
   searchParams: Promise<{ season?: string }>;
 }) {
+
+    const ALLOWED_VIDEO_TYPES = [
+    "video/mp4",
+    "video/quicktime", // .mov (iPhone)
+    "video/webm",
+    "video/x-m4v",
+    "video/avi",
+  ];
+
+  const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+
   const session = await getSession();
   const admin = await isAdmin();
 
@@ -21,7 +33,7 @@ export default async function BetsPage({
 
   const year = season ? parseInt(season, 10) : new Date().getFullYear();
 
-  /* -------------------- Voting permission (CORRECT) -------------------- */
+  /* -------------------- Voting permission -------------------- */
   const isAllowedToVote = !!(
     userId &&
     (await prisma.bet_Owner.findFirst({
@@ -103,6 +115,115 @@ export default async function BetsPage({
     }
 
     revalidatePath("/bets");
+  }
+
+  async function onAppendVideo(formData: FormData) {
+    "use server";
+
+    const session = await getSession();
+    if (!session) throw new Error("Not authenticated");
+
+    const userId =
+      typeof session.userId === "string"
+        ? parseInt(session.userId)
+        : session.userId;
+
+    const betId = Number(formData.get("betId"));
+    const file = formData.get("file") as File;
+
+    if (!betId || !file) throw new Error("Invalid input");
+
+    const bet = await prisma.bet.findUnique({
+      where: { id: betId },
+      include: {
+        season: true,
+        owners: {
+          include: {
+            agent_rel: {
+              include: {
+                user_relation: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!bet) throw new Error("Bet not found");
+
+    if (bet.season.locked) {
+      throw new Error("Season is locked");
+    }
+
+    if (bet.videoUrl) {
+      throw new Error("Video already exists");
+    }
+
+    const isOwner = bet.owners.some(
+      (o) => o.agent_rel.user_relation.id === userId
+    );
+
+    if (!isOwner) {
+      throw new Error("Not bet owner");
+    }
+
+    let videoUrl: string | null = null;
+    
+    // Validate and upload video if provided
+    if (file) {
+      // Check file type
+      if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
+        return {
+          success: false,
+          message: `Invalid video format. Allowed formats: MP4, MOV, WebM, M4V, AVI`,
+        };
+      }
+
+      // Check file size
+      if (file.size > MAX_VIDEO_SIZE) {
+        return {
+          success: false,
+          message: `Video size exceeds the maximum limit of ${MAX_VIDEO_SIZE / 1024 / 1024}MB`,
+        };
+      }
+
+      // Upload to Vercel Blob
+      try {
+        const blob = await put(
+          `bets/${Date.now()}-${file.name}`,
+          file,
+          {
+            access: "public",
+            contentType: file.type,
+          }
+        );
+        videoUrl = blob.url;
+      } catch (uploadError) {
+        console.error("Error uploading video:", uploadError);
+        return {
+          success: false,
+          message: "Failed to upload video",
+          error: uploadError instanceof Error ? uploadError.message : "Unknown error",
+        };
+      }
+    }
+
+    await prisma.bet.update({
+      where: {
+        id: bet.id,
+      },
+      data: {
+        videoUrl: videoUrl
+      }
+    })
+
+    revalidatePath("/bets");
+
+    return {
+      success: true,
+      message: "Video uploaded",
+      error: undefined,  
+    }
   }
 
   async function onUpdateComment(formData: FormData) {
@@ -212,15 +333,17 @@ export default async function BetsPage({
       <BetGrid
         admin={admin}
         bets={bets}
-        onYesAnswer={onYesAnswer}
-        onNoAnswer={onNoAnswer}
-        onUpdateComment={onUpdateComment}
-        onDeleteBet={onDeleteBet}
+        userId={userId}
         isAllowedToVote={isAllowedToVote}
         userAnswers={userAnswers}
         userComments={userComments}
         seasonVals={seasons}
         selectedYear={year}
+        onYesAnswer={onYesAnswer}
+        onNoAnswer={onNoAnswer}
+        onUpdateComment={onUpdateComment}
+        onDeleteBet={onDeleteBet}
+        onAppendVideo={onAppendVideo}
       />
     </div>
   );

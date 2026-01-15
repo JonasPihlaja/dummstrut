@@ -1,19 +1,23 @@
 "use client";
-import React, { useState } from "react";
+
+import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { CommentModal } from "@/components/CommentModal";
 import { VideoModal } from "@/components/VideoModal";
-import { useRouter } from "next/navigation";
-import { BetGridProps } from "@/types/bet";
 import { BetCard } from "./BetCard";
 import SingleSelectDropdown, { SingleSelectOption } from "./Dropdown";
+import { BetGridProps } from "@/types/bet";
 
 export function BetGrid({
   admin,
   bets,
+  userId,
   onYesAnswer,
   onNoAnswer,
   onUpdateComment,
   onDeleteBet,
+  onAppendVideo,
   isAllowedToVote,
   userAnswers,
   userComments,
@@ -21,9 +25,17 @@ export function BetGrid({
   selectedYear,
 }: BetGridProps) {
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const [activeBet, setActiveBet] = useState<{
     id: number;
     comment: string | null;
+    locked: boolean;
+  } | null>(null);
+
+  const [activeVideoAppend, setActiveVideoAppend] = useState<{
+    id: number;
+    videoUrl: string | null;
     locked: boolean;
   } | null>(null);
 
@@ -45,6 +57,29 @@ export function BetGrid({
     router.push(`/bets?season=${year}`);
   }
 
+  useEffect(() => {
+    if (activeVideoAppend) {
+      inputRef.current?.click();
+    }
+  }, [activeVideoAppend]);
+
+  async function handleVideoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !activeVideoAppend) return;
+
+    const formData = new FormData();
+    formData.append("betId", String(activeVideoAppend.id));
+    formData.append("file", file);
+
+    const result = await onAppendVideo(formData);
+    if (!result?.success) {
+      alert(result?.error || "Upload failed");
+    }
+
+    e.target.value = "";
+    setActiveVideoAppend(null);
+  }
+
   return (
     <>
       <SingleSelectDropdown
@@ -54,36 +89,65 @@ export function BetGrid({
         onChange={handleSeasonChange}
         placeholder="Choose a season..."
       />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-6">
-        {bets.map((bet) => (
-          <BetCard
-            key={bet.id}
-            admin={admin}
-            bet={bet}
-            onYesAnswer={onYesAnswer}
-            onNoAnswer={onNoAnswer}
-            onDeleteBet={onDeleteBet}
-            isAllowedToVote={isAllowedToVote}
-            userAnswer={userAnswers?.get(bet.id) ?? null}
-            userComment={userComments?.get(bet.id) ?? null}
-            onOpenComment={() =>
-              setActiveBet({
-                id: bet.id,
-                comment: userComments?.get(bet.id) ?? null,
-                locked: bet.season.locked,
-              })
-            }
-            onOpenVideo={() => {
-              if (bet.videoUrl) {
-                setActiveVideo({
-                  videoUrl: bet.videoUrl,
-                  betTitle: bet.bet,
-                });
+        {bets.map((bet) => {
+          const isOwner = bet.owners.some(
+            (owner) => owner.agent_rel.user_relation.id === userId
+          );
+
+          const canAppendVideo = isOwner && !bet.videoUrl && !bet.season.locked;
+
+          return (
+            <BetCard
+              key={bet.id}
+              admin={admin}
+              bet={bet}
+              isAllowedToVote={isAllowedToVote}
+              userAnswer={userAnswers?.get(bet.id) ?? null}
+              userComment={userComments?.get(bet.id) ?? null}
+              onYesAnswer={onYesAnswer}
+              onNoAnswer={onNoAnswer}
+              onDeleteBet={onDeleteBet}
+              onOpenComment={() =>
+                setActiveBet({
+                  id: bet.id,
+                  comment: userComments?.get(bet.id) ?? null,
+                  locked: bet.season.locked,
+                })
               }
-            }}
-          />
-        ))}
+              onOpenVideo={() => {
+                if (bet.videoUrl) {
+                  setActiveVideo({
+                    videoUrl: bet.videoUrl,
+                    betTitle: bet.bet,
+                  });
+                }
+              }}
+              onRequestAppendVideo={
+                canAppendVideo
+                  ? () =>
+                      setActiveVideoAppend({
+                        id: bet.id,
+                        locked: bet.season.locked,
+                        videoUrl: bet.videoUrl,
+                      })
+                  : undefined
+              }
+            />
+          );
+        })}
       </div>
+
+      {activeVideoAppend && (
+        <input
+          ref={inputRef}
+          type="file"
+          accept="video/*"
+          onChange={handleVideoChange}
+          className="hidden"
+        />
+      )}
 
       {activeBet && (
         <CommentModal
