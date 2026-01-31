@@ -10,6 +10,8 @@ import {
 import MultiSelectDropdown, { MultiSelectOption } from "./MultiDropdown";
 import SingleSelectDropdown, { SingleSelectOption } from "./Dropdown";
 import FileInput from "@/components/FileInput";
+import { compressVideo } from "@/lib/videoCompression";
+
 export default function BetCreator({
   seasonVals,
   agentVals,
@@ -23,6 +25,8 @@ export default function BetCreator({
   const [description, setDescription] = React.useState<string>("");
   const [message, setMessage] = React.useState<MessageState>(null);
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
+  const [isCompressing, setIsCompressing] = React.useState<boolean>(false);
+  const [compressionProgress, setCompressionProgress] = React.useState<number>(0);
 
   const dropdownAgents: MultiSelectOption<number>[] = agentVals.map(
     (agent) => ({
@@ -54,12 +58,36 @@ export default function BetCreator({
     setIsSubmitting(true);
     setMessage(null);
 
+    let videoToSubmit = video;
+
+    // Compress video if provided
+    if (video) {
+      try {
+        setIsCompressing(true);
+        setCompressionProgress(0);
+        videoToSubmit = await compressVideo(video, (progress) => {
+          setCompressionProgress(progress);
+        });
+        setIsCompressing(false);
+        setCompressionProgress(0);
+      } catch (error) {
+        setIsCompressing(false);
+        setCompressionProgress(0);
+        setMessage({
+          type: "error",
+          text: `Failed to compress video: ${error instanceof Error ? error.message : "Unknown error"}`,
+        });
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     const result = await onSubmitBet({
       title,
       description,
       agentIds: agents,
       season,
-      video,
+      video: videoToSubmit,
     });
 
     setIsSubmitting(false);
@@ -67,6 +95,7 @@ export default function BetCreator({
       setMessage({ type: "success", text: result.message });
       setTitle("");
       setDescription("");
+      setVideo(null);
       setAgents(userAgentId ? [userAgentId] : []);
     } else {
       setMessage({ type: "error", text: result.message });
@@ -129,13 +158,28 @@ export default function BetCreator({
 
         <div className="space-y-4">
           <FileInput value={video} onChange={setVideo} accept="video/*" placeholder="No video selected" />
+          {isCompressing && (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 bg-blue-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${compressionProgress}%` }}
+                  />
+                </div>
+                <span className="text-sm text-blue-700 font-medium">
+                  Compressing video... {compressionProgress}%
+                </span>
+              </div>
+            </div>
+          )}
         </div>
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || isCompressing}
           className="px-4 sm:px-5 py-2.5 bg-blue-600 active:bg-blue-700 sm:hover:bg-blue-700 text-white rounded-lg transition-colors font-medium shadow-md sm:hover:shadow-lg touch-manipulation min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? "Saving..." : "Save"}
+          {isCompressing ? `Compressing... ${compressionProgress}%` : isSubmitting ? "Saving..." : "Save"}
         </button>
       </div>
     </form>
