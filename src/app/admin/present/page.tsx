@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import SingleSelectDropdown, { SingleSelectOption } from "@/components/Dropdown";
+
+interface Season {
+  id: number;
+  year: number;
+  title: string | null;
+  locked: boolean;
+}
 
 interface Answer {
   id: number;
@@ -37,6 +45,7 @@ interface Bet {
   bet: string;
   description: string | null;
   videoUrl: string | null;
+  seasonId: number;
   answers: Answer[];
   results: Result[];
   agents: Agent[];
@@ -60,10 +69,14 @@ interface BetWithAgent {
 
 export default function AdminPresentPage() {
   const [bets, setBets] = useState<Bet[]>([]);
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null);
+  const [showSeasonModal, setShowSeasonModal] = useState(false);
   const [currentBetIndex, setCurrentBetIndex] = useState(0);
   const [revealStage, setRevealStage] = useState<'bet' | 'video' | 'answers' | 'result' | 'complete'>('bet');
   const [revealedAnswerCount, setRevealedAnswerCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isLoadingBets, setIsLoadingBets] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [revealedUserCount, setRevealedUserCount] = useState(0);
@@ -72,7 +85,7 @@ export default function AdminPresentPage() {
   const [showFailedBets, setShowFailedBets] = useState(false);
   const [revealedFailedCount, setRevealedFailedCount] = useState(0);
 
-  async function checkAdminAndLoadBets() {
+  async function checkAdminAndLoadSeasons() {
     try {
       const response = await fetch('/api/admin/check');
       if (!response.ok) {
@@ -81,21 +94,115 @@ export default function AdminPresentPage() {
       }
       const data = await response.json();
       setIsAdmin(data.isAdmin);
-      
-      const betsResponse = await fetch('/api/admin/bets');
-      const betsData = await betsResponse.json();
-      setBets(betsData);
-      setIsLoading(false);
+
+      const seasonsResponse = await fetch('/api/admin/seasons');
+      const seasonsData = await seasonsResponse.json();
+      setSeasons(seasonsData);
+      if (seasonsData.length > 0) {
+        setSelectedSeasonId(seasonsData[0].id);
+      }
+      setShowSeasonModal(true);
+      setIsCheckingAuth(false);
     } catch (error) {
       window.location.href = '/bets';
     }
   }
 
+  async function loadBetsForSeason(seasonId: number) {
+    setIsLoadingBets(true);
+    setBets([]);
+    try {
+      const betsResponse = await fetch(`/api/admin/bets?seasonId=${seasonId}`);
+      if (!betsResponse.ok) {
+        throw new Error("Failed to load bets");
+      }
+      const betsData: Bet[] = await betsResponse.json();
+      setBets(
+        Array.isArray(betsData)
+          ? betsData.filter((bet) => bet.seasonId === seasonId)
+          : []
+      );
+      setSelectedSeasonId(seasonId);
+      setShowSeasonModal(false);
+      setCurrentBetIndex(0);
+      setRevealStage('bet');
+      setRevealedAnswerCount(0);
+      setShowLeaderboard(false);
+      setShowSuccessfulBets(false);
+      setShowFailedBets(false);
+      setRevealedUserCount(0);
+      setRevealedSuccessCount(0);
+      setRevealedFailedCount(0);
+    } catch (error) {
+      window.location.href = '/bets';
+    } finally {
+      setIsLoadingBets(false);
+    }
+  }
+
+  function handleSeasonConfirm() {
+    if (selectedSeasonId) {
+      loadBetsForSeason(selectedSeasonId);
+    }
+  }
+
+  function handleChangeSeason() {
+    setBets([]);
+    setShowSeasonModal(true);
+  }
+
+  const dropdownSeasons: SingleSelectOption<number>[] = seasons.map(
+    (season) => ({
+      label: season.title
+        ? `${season.title} ${season.year}`
+        : season.year.toString(),
+      value: season.id,
+    })
+  );
+
+  const selectedSeason = seasons.find((s) => s.id === selectedSeasonId);
+
+  const seasonLabel = selectedSeason
+    ? selectedSeason.title
+      ? `${selectedSeason.title} ${selectedSeason.year}`
+      : selectedSeason.year.toString()
+    : "";
+
+  function SeasonControls() {
+    return (
+      <>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleChangeSeason();
+          }}
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg"
+        >
+          Change Season
+        </button>
+      </>
+    );
+  }
+
   useEffect(() => {
-    checkAdminAndLoadBets();
+    checkAdminAndLoadSeasons();
   }, []);
 
-  const currentBet = bets[currentBetIndex];
+  const seasonBets = useMemo(() => {
+    if (!selectedSeasonId) return [];
+    return bets.filter((bet) => bet.seasonId === selectedSeasonId);
+  }, [bets, selectedSeasonId]);
+
+  const currentBet = seasonBets[currentBetIndex];
+
+  useEffect(() => {
+    if (seasonBets.length === 0) return;
+    if (currentBetIndex >= seasonBets.length) {
+      setCurrentBetIndex(0);
+      setRevealStage('bet');
+      setRevealedAnswerCount(0);
+    }
+  }, [seasonBets, currentBetIndex]);
 
   // Handle click to reveal next answer
   useEffect(() => {
@@ -126,7 +233,7 @@ export default function AdminPresentPage() {
 
     window.addEventListener('click', handleClick);
     return () => window.removeEventListener('click', handleClick);
-  }, [showLeaderboard, revealedUserCount, bets]);
+  }, [showLeaderboard, revealedUserCount, seasonBets, selectedSeasonId]);
 
   // Handle click to reveal next successful bet
   useEffect(() => {
@@ -142,7 +249,7 @@ export default function AdminPresentPage() {
 
     window.addEventListener('click', handleClick);
     return () => window.removeEventListener('click', handleClick);
-  }, [showSuccessfulBets, revealedSuccessCount, bets]);
+  }, [showSuccessfulBets, revealedSuccessCount, seasonBets, selectedSeasonId]);
 
   // Handle click to reveal next failed bet
   useEffect(() => {
@@ -158,7 +265,7 @@ export default function AdminPresentPage() {
 
     window.addEventListener('click', handleClick);
     return () => window.removeEventListener('click', handleClick);
-  }, [showFailedBets, revealedFailedCount, bets]);
+  }, [showFailedBets, revealedFailedCount, seasonBets, selectedSeasonId]);
 
   const hasResult = currentBet?.results && currentBet.results.length > 0;
   const result = hasResult ? currentBet.results[0] : null;
@@ -167,7 +274,7 @@ export default function AdminPresentPage() {
   function calculateUserScores(): UserScore[] {
     const userMap = new Map<number, UserScore>();
 
-    bets.forEach(bet => {
+    seasonBets.forEach((bet) => {
       bet.answers.forEach(answer => {
         if (!answer.user_relation) return;
         
@@ -204,7 +311,7 @@ export default function AdminPresentPage() {
   function getSuccessfulBets(): BetWithAgent[] {
     const successfulBets: BetWithAgent[] = [];
     
-    bets.forEach(bet => {
+    seasonBets.forEach(bet => {
       const betResult = bet.results && bet.results.length > 0 ? bet.results[0] : null;
       if (betResult?.success) {
         bet.owners.forEach(owner => {
@@ -224,7 +331,7 @@ export default function AdminPresentPage() {
   function getFailedBets(): BetWithAgent[] {
     const failedBets: BetWithAgent[] = [];
     
-    bets.forEach(bet => {
+    seasonBets.forEach(bet => {
       const betResult = bet.results && bet.results.length > 0 ? bet.results[0] : null;
       if (betResult?.success === false) {
         bet.owners.forEach(owner => {
@@ -265,7 +372,7 @@ export default function AdminPresentPage() {
   }
 
   function nextBet() {
-    if (currentBetIndex < bets.length - 1) {
+    if (currentBetIndex < seasonBets.length - 1) {
       setCurrentBetIndex(currentBetIndex + 1);
       setRevealStage('bet');
       setRevealedAnswerCount(0);
@@ -306,7 +413,7 @@ export default function AdminPresentPage() {
     setRevealedAnswerCount(0);
   }
 
-  if (isLoading) {
+  if (isCheckingAuth || isLoadingBets) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
         <div className="text-white text-2xl">Loading...</div>
@@ -318,10 +425,53 @@ export default function AdminPresentPage() {
     return null;
   }
 
-  if (!currentBet && !showLeaderboard && !showSuccessfulBets && !showFailedBets) {
+  if (showSeasonModal) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
-        <div className="text-white text-2xl">No bets available</div>
+        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Choose Season
+          </h2>
+          <p className="text-gray-500 mb-6">
+            Select which season to present
+          </p>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Season
+            </label>
+            <SingleSelectDropdown
+              options={dropdownSeasons}
+              value={selectedSeasonId ?? undefined}
+              onChange={setSelectedSeasonId}
+              placeholder="Choose a season..."
+            />
+          </div>
+
+          <button
+            onClick={handleSeasonConfirm}
+            disabled={!selectedSeasonId}
+            className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Start Presentation
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (seasonBets.length === 0 && !showLeaderboard && !showSuccessfulBets && !showFailedBets) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-white text-2xl mb-6">No bets available for this season</div>
+          <button
+            onClick={handleChangeSeason}
+            className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+          >
+            Choose Another Season
+          </button>
+        </div>
       </div>
     );
   }
@@ -334,6 +484,7 @@ export default function AdminPresentPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white !max-w-none w-full">
         {/* Controls */}
         <div className="fixed top-4 right-4 z-50 flex gap-2">
+          <SeasonControls />
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -343,6 +494,10 @@ export default function AdminPresentPage() {
           >
             ← Back to Bets
           </button>
+        </div>
+
+        <div className="fixed top-4 left-4 z-50 text-sm text-gray-400">
+          {seasonLabel}
         </div>
 
         {/* Click instruction */}
@@ -444,6 +599,7 @@ export default function AdminPresentPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white !max-w-none w-full">
         {/* Controls */}
         <div className="fixed top-4 right-4 z-50 flex gap-2">
+          <SeasonControls />
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -453,6 +609,10 @@ export default function AdminPresentPage() {
           >
             ← Back to Bets
           </button>
+        </div>
+
+        <div className="fixed top-4 left-4 z-50 text-sm text-gray-400">
+          {seasonLabel}
         </div>
 
         {/* Click instruction */}
@@ -544,6 +704,7 @@ export default function AdminPresentPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white !max-w-none w-full">
         {/* Controls */}
         <div className="fixed top-4 right-4 z-50 flex gap-2">
+          <SeasonControls />
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -553,6 +714,10 @@ export default function AdminPresentPage() {
           >
             ← Back to Bets
           </button>
+        </div>
+
+        <div className="fixed top-4 left-4 z-50 text-sm text-gray-400">
+          {seasonLabel}
         </div>
 
         {/* Click instruction */}
@@ -658,10 +823,15 @@ export default function AdminPresentPage() {
   }
 
   // Bets Presentation View
+  if (!currentBet) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white !max-w-none w-full">
       {/* Controls */}
       <div className="fixed top-4 right-4 z-50 flex gap-2">
+        <SeasonControls />
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -677,7 +847,7 @@ export default function AdminPresentPage() {
             e.stopPropagation();
             nextBet();
           }}
-          disabled={currentBetIndex === bets.length - 1}
+          disabled={currentBetIndex === seasonBets.length - 1}
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Next →
@@ -698,7 +868,8 @@ export default function AdminPresentPage() {
 
       {/* Bet Counter */}
       <div className="fixed top-4 left-4 z-50 text-sm text-gray-400">
-        Bet {currentBetIndex + 1} of {bets.length}
+        <div>{seasonLabel}</div>
+        <div>Bet {currentBetIndex + 1} of {seasonBets.length}</div>
       </div>
 
       {/* Click instruction during answers phase */}
@@ -827,7 +998,7 @@ export default function AdminPresentPage() {
             <div className="text-4xl font-bold text-gray-300 mb-8">
               Bet Complete
             </div>
-            {currentBetIndex === bets.length - 1 && (
+            {currentBetIndex === seasonBets.length - 1 && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
