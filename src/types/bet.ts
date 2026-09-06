@@ -26,8 +26,6 @@ export interface BetGridProps {
   onAppendVideo: (
     formData: FormData
   ) => Promise<{ success: boolean; message: string; error?: string } | undefined>;
-  seasonVals: Season[];
-  selectedYear: number;
 }
 
 export interface BetCardProps {

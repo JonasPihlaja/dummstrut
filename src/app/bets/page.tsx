@@ -1,25 +1,22 @@
 import prisma from "@/lib/prisma";
 import { BetGrid } from "@/components/BetGrid";
+import { BetSwipeView } from "@/components/BetSwipeView";
+import { SeasonSwitcher } from "@/components/SeasonSwitcher";
+import { BetViewToggle } from "@/components/BetViewToggle";
 import { getSession, isAdmin } from "@/lib/auth";
-import { revalidatePath } from "next/cache";
-import { put } from "@vercel/blob";
+import {
+  onYesAnswer,
+  onNoAnswer,
+  onAppendVideo,
+  onUpdateComment,
+  onDeleteBet,
+} from "./actions";
 
 export default async function BetsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ season?: string }>;
+  searchParams: Promise<{ season?: string; view?: string }>;
 }) {
-
-    const ALLOWED_VIDEO_TYPES = [
-    "video/mp4",
-    "video/quicktime", // .mov (iPhone)
-    "video/webm",
-    "video/x-m4v",
-    "video/avi",
-  ];
-
-  const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10MB in bytes
-
   const session = await getSession();
   const admin = await isAdmin();
 
@@ -29,9 +26,10 @@ export default async function BetsPage({
       : session.userId
     : null;
 
-  const { season } = await searchParams;
+  const { season, view: rawView } = await searchParams;
 
   const year = season ? parseInt(season, 10) : new Date().getFullYear();
+  const view = rawView === "cards" ? "cards" : "grid";
 
   /* -------------------- Voting permission -------------------- */
   const isAllowedToVote = !!(
@@ -50,229 +48,6 @@ export default async function BetsPage({
       },
     }))
   );
-
-  /* -------------------- Server actions -------------------- */
-
-  async function onYesAnswer(formData: FormData) {
-    "use server";
-
-    const session = await getSession();
-    if (!session) throw new Error("You must be logged in to vote");
-
-    const userId =
-      typeof session.userId === "string"
-        ? parseInt(session.userId)
-        : session.userId;
-
-    const betId = Number(formData.get("betId"));
-    if (!betId) throw new Error("Invalid bet ID");
-
-    const existing = await prisma.answer.findFirst({
-      where: { user: userId, bet: betId },
-    });
-
-    if (existing) {
-      await prisma.answer.update({
-        where: { id: existing.id },
-        data: { success: true },
-      });
-    } else {
-      await prisma.answer.create({
-        data: { user: userId, bet: betId, success: true },
-      });
-    }
-
-    revalidatePath("/bets");
-  }
-
-  async function onNoAnswer(formData: FormData) {
-    "use server";
-
-    const session = await getSession();
-    if (!session) throw new Error("You must be logged in to vote");
-
-    const userId =
-      typeof session.userId === "string"
-        ? parseInt(session.userId)
-        : session.userId;
-
-    const betId = Number(formData.get("betId"));
-    if (!betId) throw new Error("Invalid bet ID");
-
-    const existing = await prisma.answer.findFirst({
-      where: { user: userId, bet: betId },
-    });
-
-    if (existing) {
-      await prisma.answer.update({
-        where: { id: existing.id },
-        data: { success: false },
-      });
-    } else {
-      await prisma.answer.create({
-        data: { user: userId, bet: betId, success: false },
-      });
-    }
-
-    revalidatePath("/bets");
-  }
-
-  async function onAppendVideo(formData: FormData) {
-    "use server";
-
-    const session = await getSession();
-    if (!session) throw new Error("Not authenticated");
-
-    const userId =
-      typeof session.userId === "string"
-        ? parseInt(session.userId)
-        : session.userId;
-
-    const betId = Number(formData.get("betId"));
-    const file = formData.get("file") as File;
-
-    if (!betId || !file) throw new Error("Invalid input");
-
-    const bet = await prisma.bet.findUnique({
-      where: { id: betId },
-      include: {
-        season: true,
-        owners: {
-          include: {
-            agent_rel: {
-              include: {
-                user_relation: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!bet) throw new Error("Bet not found");
-
-    if (bet.season.locked) {
-      throw new Error("Season is locked");
-    }
-
-    if (bet.videoUrl) {
-      throw new Error("Video already exists");
-    }
-
-    const isOwner = bet.owners.some(
-      (o) => o.agent_rel.user_relation.id === userId
-    );
-
-    if (!isOwner) {
-      throw new Error("Not bet owner");
-    }
-
-    let videoUrl: string | null = null;
-    
-    // Validate and upload video if provided
-    if (file) {
-      // Check file type
-      if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
-        return {
-          success: false,
-          message: `Invalid video format. Allowed formats: MP4, MOV, WebM, M4V, AVI`,
-        };
-      }
-
-      // Check file size
-      if (file.size > MAX_VIDEO_SIZE) {
-        return {
-          success: false,
-          message: `Video size exceeds the maximum limit of ${MAX_VIDEO_SIZE / 1024 / 1024}MB`,
-        };
-      }
-
-      // Upload to Vercel Blob
-      try {
-        const blob = await put(
-          `bets/${Date.now()}-${file.name}`,
-          file,
-          {
-            access: "public",
-            contentType: file.type,
-          }
-        );
-        videoUrl = blob.url;
-      } catch (uploadError) {
-        console.error("Error uploading video:", uploadError);
-        return {
-          success: false,
-          message: "Failed to upload video",
-          error: uploadError instanceof Error ? uploadError.message : "Unknown error",
-        };
-      }
-    }
-
-    await prisma.bet.update({
-      where: {
-        id: bet.id,
-      },
-      data: {
-        videoUrl: videoUrl
-      }
-    })
-
-    revalidatePath("/bets");
-
-    return {
-      success: true,
-      message: "Video uploaded",
-      error: undefined,  
-    }
-  }
-
-  async function onUpdateComment(formData: FormData) {
-    "use server";
-
-    const session = await getSession();
-    if (!session) throw new Error("You must be logged in to comment");
-
-    const userId =
-      typeof session.userId === "string"
-        ? parseInt(session.userId)
-        : session.userId;
-
-    const betId = Number(formData.get("betId"));
-    const comment = formData.get("comment")?.toString() || null;
-
-    if (!betId) throw new Error("Invalid bet ID");
-
-    const answer = await prisma.answer.findFirst({
-      where: { user: userId, bet: betId },
-      include: { bet_relation: { include: { season: true } } },
-    });
-
-    if (!answer) {
-      throw new Error("You must answer the bet before commenting");
-    }
-
-    if (answer.bet_relation.season.locked) {
-      throw new Error("Comments are locked for this season");
-    }
-
-    await prisma.answer.update({
-      where: { id: answer.id },
-      data: { comment },
-    });
-
-    revalidatePath("/bets");
-  }
-
-  async function onDeleteBet(id: number) {
-    "use server";
-
-    await prisma.bet_Agent.deleteMany({ where: { bet: id } });
-    await prisma.bet_Owner.deleteMany({ where: { bet: id } });
-    await prisma.answer.deleteMany({ where: { bet: id } });
-    await prisma.bet.delete({ where: { id } });
-
-    revalidatePath("/bets");
-  }
 
   /* -------------------- Data fetching -------------------- */
 
@@ -316,6 +91,9 @@ export default async function BetsPage({
     });
   }
 
+  // Cards view only shows bets the user has neither voted on nor commented on.
+  const pendingBets = bets.filter((bet) => userAnswers.get(bet.id) === null);
+
   const seasons = await prisma.season.findMany({
     orderBy: { year: "desc" },
   });
@@ -330,21 +108,44 @@ export default async function BetsPage({
         are logged in
       </h4>
 
-      <BetGrid
-        admin={admin}
-        bets={bets}
-        userId={userId}
-        isAllowedToVote={isAllowedToVote}
-        userAnswers={userAnswers}
-        userComments={userComments}
-        seasonVals={seasons}
-        selectedYear={year}
-        onYesAnswer={onYesAnswer}
-        onNoAnswer={onNoAnswer}
-        onUpdateComment={onUpdateComment}
-        onDeleteBet={onDeleteBet}
-        onAppendVideo={onAppendVideo}
-      />
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <SeasonSwitcher
+          seasonVals={seasons}
+          selectedYear={year}
+          className="w-44"
+        />
+        <BetViewToggle />
+      </div>
+
+      {view === "cards" ? (
+        <BetSwipeView
+          key={year}
+          bets={pendingBets}
+          admin={admin}
+          userId={userId}
+          isAllowedToVote={isAllowedToVote}
+          selectedYear={year}
+          onYesAnswer={onYesAnswer}
+          onNoAnswer={onNoAnswer}
+          onUpdateComment={onUpdateComment}
+          onDeleteBet={onDeleteBet}
+          onAppendVideo={onAppendVideo}
+        />
+      ) : (
+        <BetGrid
+          admin={admin}
+          bets={bets}
+          userId={userId}
+          isAllowedToVote={isAllowedToVote}
+          userAnswers={userAnswers}
+          userComments={userComments}
+          onYesAnswer={onYesAnswer}
+          onNoAnswer={onNoAnswer}
+          onUpdateComment={onUpdateComment}
+          onDeleteBet={onDeleteBet}
+          onAppendVideo={onAppendVideo}
+        />
+      )}
     </div>
   );
 }
