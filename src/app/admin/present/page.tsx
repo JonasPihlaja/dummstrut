@@ -275,6 +275,10 @@ export default function AdminPresentPage() {
     const userMap = new Map<number, UserScore>();
 
     seasonBets.forEach((bet) => {
+      const betResult =
+        bet.results && bet.results.length > 0 ? bet.results[0] : null;
+      if (!betResult || betResult.success === null) return;
+
       bet.answers.forEach(answer => {
         if (!answer.user_relation) return;
         
@@ -293,7 +297,7 @@ export default function AdminPresentPage() {
 
         const userScore = userMap.get(userId)!;
         userScore.totalAnswers++;
-        if (answer.success) {
+        if (answer.success === betResult.success) {
           userScore.correctAnswers++;
         }
       });
