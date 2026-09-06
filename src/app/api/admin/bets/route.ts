@@ -44,6 +44,9 @@ export async function GET(request: Request) {
             },
           },
         },
+        orderBy: {
+          id: "asc",
+        },
       },
       owners: {
         include: {
